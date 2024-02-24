@@ -1,0 +1,53 @@
+# 1. client -> gateway [set connection]
+# 2. producer -> gateway -> client -> server [get/req]
+# 3. server -> client -> gateway -> producer [get/rsp]
+version: "3"
+services:
+  producer:
+    build:
+      context: ./
+      dockerfile: cmd/producer/Dockerfile
+    depends_on:
+      - client
+    deploy:
+      mode: replicated
+      replicas: 1
+    networks:
+      - producer-gateway
+  gateway:
+    build:
+      context: ./
+      dockerfile: cmd/gateway/Dockerfile
+    ports:
+      - 9000:9000
+    networks:
+      - producer-gateway      
+      - gateway-client
+  client:
+    build:
+      context: ./
+      dockerfile: cmd/client/Dockerfile
+    depends_on:
+      - server
+      - gateway
+    deploy:
+      mode: replicated
+      replicas: 2
+    networks:
+      - gateway-client
+      - client-server
+  server:
+    build:
+      context: ./
+      dockerfile: cmd/server/Dockerfile
+    depends_on:
+      - gateway
+    networks:
+      - client-server
+networks:
+  gateway-client:
+    driver: bridge
+  producer-gateway:
+    driver: bridge
+  client-server:
+    driver: bridge
